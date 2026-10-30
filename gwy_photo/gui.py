@@ -81,7 +81,7 @@ class PhotoWindow(Adw.ApplicationWindow):
         self._busy = False
 
         self._build_ui()
-        self._install_actions()
+        self._install_shortcuts()
         self._install_dnd()
 
     # ------------------------------------------------------------------ UI
@@ -90,10 +90,10 @@ class PhotoWindow(Adw.ApplicationWindow):
         toolbar = Adw.ToolbarView()
         toolbar.add_top_bar(header)
 
-        about_btn = Gtk.Button(icon_name="help-about-symbolic")
-        about_btn.set_tooltip_text("关于")
-        about_btn.connect("clicked", lambda *_: self.activate_action("about", None))
-        header.pack_end(about_btn)
+        self.about_btn = Gtk.Button(icon_name="help-about-symbolic")
+        self.about_btn.set_tooltip_text("关于")
+        self.about_btn.connect("clicked", self._on_about)
+        header.pack_end(self.about_btn)
 
         self.toast_overlay = Adw.ToastOverlay()
         toolbar.set_content(self.toast_overlay)
@@ -218,12 +218,12 @@ class PhotoWindow(Adw.ApplicationWindow):
         self.open_btn = Gtk.Button(label="打开照片文件")
         self.open_btn.add_css_class("suggested-action")
         self.open_btn.add_css_class("pill")
-        self.open_btn.connect("clicked", lambda *_: self.activate_action("open", None))
+        self.open_btn.connect("clicked", self._on_open)
 
         self.save_btn = Gtk.Button(label="保存照片文件")
         self.save_btn.add_css_class("pill")
         self.save_btn.set_sensitive(False)
-        self.save_btn.connect("clicked", lambda *_: self.activate_action("save", None))
+        self.save_btn.connect("clicked", self._on_save)
 
         quit_btn = Gtk.Button(label="退出")
         quit_btn.add_css_class("flat")
@@ -240,22 +240,27 @@ class PhotoWindow(Adw.ApplicationWindow):
 
         main.append(right)
 
-    def _install_actions(self):
-        actions = [
-            ("open", self._on_open),
-            ("save", self._on_save),
-            ("about", self._on_about),
-            ("quit", lambda *_: self.close()),
-        ]
-        for name, cb in actions:
-            act = Gio.SimpleAction.new(name, None)
-            act.connect("activate", cb)
-            self.add_action(act)
+    def _install_shortcuts(self):
+        """Window-local shortcuts.
 
-        app = self.get_application()
-        app.set_accels_for_action("win.open", ["<Control>o"])
-        app.set_accels_for_action("win.save", ["<Control>s"])
-        app.set_accels_for_action("win.quit", ["<Control>q"])
+        We deliberately avoid Gtk.Widget.activate_action() here: on GTK 4.24
+        window-local actions are listed by list_actions() but activate_action()
+        can return False without firing them.  A ShortcutController calls the
+        handlers directly and is independent of the action muxer.
+        """
+        shortcuts = Gtk.ShortcutController()
+        bindings = (
+            ("<Control>o", self._on_open),
+            ("<Control>s", self._on_save),
+            ("<Control>q", lambda *_: self.close()),
+        )
+        for accel, callback in bindings:
+            trigger = Gtk.ShortcutTrigger.parse_string(accel)
+            action = Gtk.CallbackAction.new(
+                lambda _w, _args, cb=callback: (cb(), True)[1]
+            )
+            shortcuts.add_shortcut(Gtk.Shortcut.new(trigger, action))
+        self.add_controller(shortcuts)
 
     def _install_dnd(self):
         try:
@@ -298,7 +303,10 @@ class PhotoWindow(Adw.ApplicationWindow):
     def _open_done(self, dlg, result):
         try:
             gfile = dlg.open_finish(result)
-        except GLib.Error:
+        except GLib.Error as exc:
+            self.toast_overlay.add_toast(
+                Adw.Toast(title=f"无法打开文件选择器：{exc.message}")
+            )
             return
         if gfile and gfile.get_path():
             self.load_photo(gfile.get_path())
@@ -317,7 +325,10 @@ class PhotoWindow(Adw.ApplicationWindow):
     def _save_done(self, dlg, result):
         try:
             gfile = dlg.save_finish(result)
-        except GLib.Error:
+        except GLib.Error as exc:
+            self.toast_overlay.add_toast(
+                Adw.Toast(title=f"无法打开保存对话框：{exc.message}")
+            )
             return
         if not gfile:
             return
@@ -341,7 +352,7 @@ class PhotoWindow(Adw.ApplicationWindow):
             application_name="照片处理工具",
             application_icon="io.github.gwyphoto.Linux",
             developer_name="Linux port of PhotoProcess 1.0",
-            version="1.0.0",
+            version="1.0.1",
             comments=(
                 "国家公务员考试报名照片处理工具的 Linux 移植版。\n"
                 "按原程序的规则检查 JPG 格式、像素数、白/蓝背景与人像头部比例，"
