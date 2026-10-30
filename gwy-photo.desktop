@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=照片处理工具
+Name[en]=Exam Photo Tool
+Comment=国家公务员考试报名照片处理工具（Linux 移植版）
+Comment[en]=Linux port of the civil-service exam photo processor
+Exec=@EXEC@ --gui %f
+Icon=io.github.gwyphoto.Linux
+Terminal=false
+Categories=Graphics;Photography;Utility;
+MimeType=image/jpeg;
+Keywords=photo;id;passport;证件照;报名照片;国考;
+StartupNotify=true

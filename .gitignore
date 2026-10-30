@@ -1,0 +1,11 @@
+# Python / virtualenv
+.venv/
+__pycache__/
+*.pyc
+
+# 本地测试图片与运行产物（绝不入库）
+samples/
+gwy-sample/
+demo.jpg
+*.local.jpg
+out*.jpg

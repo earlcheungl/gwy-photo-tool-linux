@@ -1,0 +1,10 @@
+#!/bin/sh
+# Launcher for the Linux port of the exam photo tool.
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+PY="$HERE/.venv/bin/python"
+if [ ! -x "$PY" ]; then
+    echo "缺少运行环境：请先在 $HERE 运行 ./install.sh" >&2
+    exit 1
+fi
+export PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PY" -m gwy_photo.cli "$@"
