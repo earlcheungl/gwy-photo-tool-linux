@@ -1,6 +1,8 @@
 #!/bin/sh
 # Launcher for the Linux port of the exam photo tool.
-HERE=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+# Resolve symlinks first: ~/.local/bin/gwy-photo -> <repo>/bin/gwy-photo
+SELF=$(readlink -f -- "$0" 2>/dev/null || printf '%s' "$0")
+HERE=$(CDPATH= cd -- "$(dirname -- "$SELF")/.." && pwd)
 PY="$HERE/.venv/bin/python"
 if [ ! -x "$PY" ]; then
     echo "缺少运行环境：请先在 $HERE 运行 ./install.sh" >&2
